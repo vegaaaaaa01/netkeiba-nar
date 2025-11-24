@@ -13,7 +13,7 @@ st.title("地方競馬(NAR) 出馬表生成ツール")
 
 # ▼ プルダウンで競馬場選択
 venue_list = list(NAR_JYO_CD.keys())
-default_venue = "高知" if "高知" in venue_list else venue_list[0]
+
 place_name = st.selectbox("競馬場を選択してください", options=venue_list, index=venue_list.index(default_venue))
 
 # ▼ 開催日入力
