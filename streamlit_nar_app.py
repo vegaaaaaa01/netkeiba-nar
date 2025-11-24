@@ -17,7 +17,7 @@ default_venue = "高知" if "高知" in venue_list else venue_list[0]
 place_name = st.selectbox("競馬場を選択してください", options=venue_list, index=venue_list.index(default_venue))
 
 # ▼ 開催日入力
-ymd_input = st.text_input("開催日 (YYYYMMDD または YYMMDD)", value="0000000")
+ymd_input = st.text_input("開催日 (YYYYMMDD または YYMMDD)", value="")
 
 if st.button("出馬表を取得してExcelを生成"):
     try:
