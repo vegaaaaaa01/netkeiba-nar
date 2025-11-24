@@ -30,7 +30,7 @@ NAR_JYO_CD = {
     "名古屋": 43,
     "園田": 51,
     "姫路": 52,
-    "高知": 55,
+    "高知": 54,
     "佐賀": 61,
 }
 
@@ -50,36 +50,19 @@ def normalize_ymd(ymd: str) -> str:
     raise ValueError("日付は YYYYMMDD または YYMMDD の数字で入力してください")
 
 
-def build_kaisai_id(ymd8: str, place_name: str) -> str:
+def get_race_ids_nar(yyyymmdd: str, place_name: str, max_races: int = 12) -> list[str]:
+    ymd = normalize_ymd(yyyymmdd)
     if place_name not in NAR_JYO_CD:
         raise ValueError(f"未知の競馬場です: {place_name}")
-    year = ymd8[:4]
-    mmdd = ymd8[4:]
+    year = ymd[:4]
+    mmdd = ymd[4:]
     code_int = NAR_JYO_CD[place_name]
     code_str = f"{code_int:02d}"
-    return f"{year}{code_str}{mmdd}"
-
-
-def get_race_ids_nar(yyyymmdd: str, place_name: str, timeout: int = 15) -> list[str]:
-    ymd = normalize_ymd(yyyymmdd)
-    kaisai_id = build_kaisai_id(ymd, place_name)
-    url = f"{BASE_NAR}/top/race_list.html?kaisai_date={ymd}&kaisai_id={kaisai_id}"
-    resp = requests.get(url, headers=HEADERS, timeout=timeout)
-    text = None
-    for enc in [resp.apparent_encoding, "utf-8", "euc_jp", "shift_jis", "cp932"]:
-        try:
-            resp.encoding = enc
-            t = resp.text
-            if "race_id=" in t:
-                text = t
-                break
-        except Exception:
-            pass
-    if text is None:
-        resp.encoding = resp.apparent_encoding or "utf-8"
-        text = resp.text
-    ids = set(re.findall(r"race_id=(\d{12})", text))
-    return sorted(ids)
+    race_ids: list[str] = []
+    for r in range(1, max_races + 1):
+        rr = f"{r:02d}"
+        race_ids.append(f"{year}{code_str}{mmdd}{rr}")
+    return race_ids
 
 
 def fetch_shutuba_df_nar(race_id: str) -> pd.DataFrame:
@@ -344,7 +327,7 @@ def export_one_book_all_venues_pretty_to_bytes(df: pd.DataFrame, zoom: int = 165
                     wr,
                     4,
                     str(out.iloc[r, 4]) if pd.notna(out.iloc[r, 4]) else "",
-                    fmt("cell", top=(wr ==DATA_START), bottom=(wr == bottom_row)),
+                    fmt("cell", top=(wr == DATA_START), bottom=(wr == bottom_row)),
                 )
                 ws.write(
                     wr,
