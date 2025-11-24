@@ -50,19 +50,15 @@ def normalize_ymd(ymd: str) -> str:
     raise ValueError("日付は YYYYMMDD または YYMMDD の数字で入力してください")
 
 
-def get_race_ids_nar(yyyymmdd: str, place_name: str, max_races: int = 12) -> list[str]:
-    ymd = normalize_ymd(yyyymmdd)
+def build_race_id(ymd8: str, place_name: str, race_no: int) -> str:
     if place_name not in NAR_JYO_CD:
         raise ValueError(f"未知の競馬場です: {place_name}")
-    year = ymd[:4]
-    mmdd = ymd[4:]
+    year = ymd8[:4]
+    mmdd = ymd8[4:]
     code_int = NAR_JYO_CD[place_name]
     code_str = f"{code_int:02d}"
-    race_ids: list[str] = []
-    for r in range(1, max_races + 1):
-        rr = f"{r:02d}"
-        race_ids.append(f"{year}{code_str}{mmdd}{rr}")
-    return race_ids
+    rr = f"{race_no:02d}"
+    return f"{year}{code_str}{mmdd}{rr}"
 
 
 def fetch_shutuba_df_nar(race_id: str) -> pd.DataFrame:
@@ -155,19 +151,27 @@ def fetch_shutuba_df_nar(race_id: str) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["競馬場名", "レース", "発走時刻", "枠番", "馬番", "馬名", "騎手名"])
 
 
-def get_shutuba_by_date_nar(yyyymmdd: str, place_name: str) -> pd.DataFrame:
+def get_shutuba_by_date_nar(yyyymmdd: str, place_name: str, max_races: int = 14) -> pd.DataFrame:
     ymd = normalize_ymd(yyyymmdd)
-    race_ids = get_race_ids_nar(ymd, place_name)
-    if not race_ids:
-        return pd.DataFrame(columns=["競馬場名", "レース", "発走時刻", "枠番", "馬番", "馬名", "騎手名"])
     dfs = []
-    for rid in race_ids:
+    found_any = False
+    empty_streak = 0
+    for r in range(1, max_races + 1):
+        race_id = build_race_id(ymd, place_name, r)
         try:
-            df_one = fetch_shutuba_df_nar(rid)
-            if not df_one.empty:
-                dfs.append(df_one)
+            df_one = fetch_shutuba_df_nar(race_id)
         except Exception as e:
-            print(f"[WARN] {rid}: {e}")
+            print(f"[WARN] {race_id}: {e}")
+            df_one = pd.DataFrame()
+        if df_one.empty:
+            if found_any:
+                empty_streak += 1
+                if empty_streak >= 2:
+                    break
+            continue
+        dfs.append(df_one)
+        found_any = True
+        empty_streak = 0
     if not dfs:
         return pd.DataFrame(columns=["競馬場名", "レース", "発走時刻", "枠番", "馬番", "馬名", "騎手名"])
     df = pd.concat(dfs, ignore_index=True)
@@ -294,7 +298,7 @@ def export_one_book_all_venues_pretty_to_bytes(df: pd.DataFrame, zoom: int = 165
             ws.hide_gridlines(2)
             ws.set_margins(0.3, 0.3, 0.3, 0.3)
             ws.set_default_row(22)
-            ws.merge_range(0, 0, 0, 5, f"{venue}{int(R)}R　レースコメント：", title_fmt)
+            ws.merge_range(0, 0, 0, 5, f"{venue}{int(R)}R", title_fmt)
             ws.set_row(0, 42)
             ws.set_column(0, 0, 4)
             ws.set_column(1, 1, 4)
