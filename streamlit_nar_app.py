@@ -32,7 +32,7 @@ if st.button("出馬表を取得してExcelを生成"):
         else:
             st.success(f"{place_name} の出馬表を取得しました。行数: {len(df)}")
             excel_bytes = export_one_book_all_venues_pretty_to_bytes(df)
-            filename = f"NAR_{place_name}_出馬表_{ymd}.xlsx"
+            filename = f"{place_name}_出馬表_{ymd}.xlsx"
             st.download_button(
                 label="出馬表Excelをダウンロード",
                 data=excel_bytes,
